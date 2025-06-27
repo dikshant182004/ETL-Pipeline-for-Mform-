@@ -117,7 +117,69 @@ form_schema = StructType([
         StructField("_id", StructType([StructField("$oid", StringType())])),
         StructField("title", StringType()),
         StructField("buttons", ArrayType(StringType())),
-        StructField("question", ArrayType(MapType(StringType(), StringType())))
+        StructField("question", ArrayType(StructType([
+            StructField("_id", StructType([
+                StructField("$oid", StringType())
+            ])),
+            StructField("label", StringType()),
+            StructField("title", StringType()),
+            StructField("shortKey", StringType()),
+            StructField("order", StringType()),
+            StructField("viewSequence", StringType()),
+            StructField("input_type", StringType()),
+            StructField("editable", BooleanType()),
+            StructField("isOtherMaster", BooleanType()),
+            StructField("isEncrypted", BooleanType()),
+            StructField("showComment", BooleanType()),
+            StructField("information", StringType()),
+            StructField("hint", StringType()),
+            StructField("min", IntegerType()),
+            StructField("max", IntegerType()),
+            StructField("pattern", StringType()),
+
+            StructField("parent", ArrayType(StructType([
+                StructField("value", StringType()),
+                StructField("type", StringType()),
+                StructField("order", StringType())
+            ]))),
+
+            StructField("child", ArrayType(StructType([
+                StructField("value", StringType()),
+                StructField("type", StringType()),
+                StructField("order", StringType())
+            ]))),
+
+            StructField("validation", ArrayType(StructType([
+                StructField("_id", StringType()),
+                StructField("value", StringType()),
+                StructField("error_msg", StringType())
+            ]))),
+
+            StructField("answer_option", ArrayType(StructType([
+                StructField("_id", StructType([
+                    StructField("$oid", StringType())
+                ])),
+                StructField("name", StringType()),
+                StructField("shortKey", StringType()),
+                StructField("viewSequence", StringType()),
+                StructField("visibility", StringType()),
+
+                StructField("did", StringType()),
+                StructField("coordinate", StringType())
+            ]))),
+
+            StructField("resource_urls", ArrayType(StringType())),
+
+            StructField("restrictions", ArrayType(StructType([
+                StructField("type", StringType()),
+                StructField("value", StringType())
+            ]))),
+            StructField("weightage", ArrayType(StructType([
+                StructField("type", StringType()),
+                StructField("value", StringType())
+            ]))),
+
+            ])))
         ])
     )),
     StructField("modifiedAt", StructType([StructField("$date", StringType())])),
@@ -224,15 +286,7 @@ answer_option_schema = StructType([
     StructField("shortKey", StringType(), True),
     StructField("viewSequence", StringType(), True),
     StructField("visibility", StringType(), True),
-])
-
-did_schema = StructType([
-    StructField("option_id", StringType(), True),
-    StructField("did", StringType(), True)
-])
-
-coord_schema = StructType([
-    StructField("option_id", StringType(), True),
+    StructField("did", StringType(), True),
     StructField("coordinate", StringType(), True)
 ])
 

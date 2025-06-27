@@ -1,6 +1,7 @@
 import os
 from datetime import datetime
 from dataclasses import dataclass
+from typing import Optional
 
 from etl.constants import *
 
@@ -20,3 +21,7 @@ class ExtractConfig:
     database: str = DATABASE_NAME
     collection: str = COLLECTION_NAME
 
+
+@dataclass
+class TransformConfig:
+    form_type: Optional[str] = None

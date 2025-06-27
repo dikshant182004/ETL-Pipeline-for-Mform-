@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from typing import Optional, List
+from pyspark.sql import DataFrame
 
 @dataclass
 class ExtractionArtifact:
@@ -9,10 +9,21 @@ class ExtractionArtifact:
 
 @dataclass
 class TransformationArtifact:
-    row_count: int
-    columns: List[str]
-    status: str
-    form_id: str
+    form_df: DataFrame
+    language_df: DataFrame
+    question_df: DataFrame
+    parent_df: DataFrame
+    child_df: DataFrame
+    validation_df: DataFrame
+    answer_option_df: DataFrame
+    range_rule_df: DataFrame
+    restriction_df: DataFrame
+    resource_url_df: DataFrame
+    weightage_df: DataFrame
+    get_dynamic_option_df: DataFrame
+    get_dynamic_option_mapping_df: DataFrame
+    create_dynamic_option_df: DataFrame
+    projects_df: DataFrame
 
 @dataclass
 class LoadArtifact:
