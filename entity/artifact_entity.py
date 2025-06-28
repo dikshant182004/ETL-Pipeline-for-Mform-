@@ -20,6 +20,7 @@ class TransformationArtifact:
     restriction_df: DataFrame
     resource_url_df: DataFrame
     weightage_df: DataFrame
+    restriction_order_df: DataFrame
     get_dynamic_option_df: DataFrame
     get_dynamic_option_mapping_df: DataFrame
     create_dynamic_option_df: DataFrame

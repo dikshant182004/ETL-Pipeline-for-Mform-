@@ -4,7 +4,7 @@ from pyspark.sql import SparkSession
 from pyspark.sql import DataFrame
 from pyspark.sql.functions import col, explode, explode_outer
 from etl.entity.artifact_entity import TransformationArtifact
-from etl.schemas import form_schema,language_schema,question_schema,parent_schema,child_schema,validation_schema,answer_option_schema,range_rule_schema,resource_url_schema,restriction_schema,weightage_schema,get_dynamic_option_schema,data_orders_mapping_schema,projects_schema,create_dynamic_option_schema
+from etl.schemas import form_schema,language_schema,question_schema,parent_schema,child_schema,validation_schema,answer_option_schema,range_rule_schema,resource_url_schema,restriction_schema,weightage_schema,get_dynamic_option_schema,data_orders_mapping_schema,projects_schema,create_dynamic_option_schema,restriction_order_schema
 from etl.entity.artifact_entity import ExtractionArtifact
 from etl.exception import ETL_Exception
 
@@ -33,7 +33,6 @@ class FormTransformer:
                 col("_id.$oid").alias("form_id"),
                 col("formSchedule.schedules").alias("form_schedules"),
                 col("project.$oid").alias("project"),
-                col("projects"),
                 col("isHidden").cast("boolean"),
                 col("projectOrder").cast("int"),
                 col("organisationId.$oid").alias("organisation_id"),
@@ -92,19 +91,19 @@ class FormTransformer:
                 col("tags"),
                 col("formId").cast("int"),
                 col("__v").alias("form_version"),
-                col("createDynamicOption"),
                 col("createdAt").cast("timestamp"),
                 col("externalResource"),
                 col("fillCount").cast("int"),
                 col("formIcon"),
-                col("getDynamicOption"),
                 col("hooks"),
                 col("mandatoryModules"),
                 col("googleSheet"),
                 col("masterConfig"),
                 col("modifiedAt.$date").cast("timestamp").alias("modifiedAt"),
                 col("version"),
-                col("maskingConfig")
+                col("maskingConfig"),
+                col("copiedFromBackup").cast("boolean").alias("copied_from_backup"),
+                col("copiedFromBackup2").cast("boolean").alias("copied_from_backup2"),
             )
             return form_df
         except Exception as e:
@@ -232,7 +231,7 @@ class LanguageQuestionTransformer(FormTransformer):
     def transform_questions_data(self) -> DataFrame:
         try:
             logging.info("Extracting the question data from each language object.")
-            question_df = self.lang_df.select(
+            question_df = self.ques_df.select(
                 col("question._id.$oid").alias("question_id"),
                 col("language_id"),
                 col("question.label"),
@@ -246,7 +245,8 @@ class LanguageQuestionTransformer(FormTransformer):
                 col("question.isEncrypted").cast("boolean").alias("isEncrypted"),
                 col("question.showComment").cast("boolean").alias("showComment"),
                 col("question.information"),
-                col("question.hint")
+                col("question.hint"),
+                col("question.width")
             )
 
             final_question_df = self.spark.createDataFrame(question_df.rdd,schema=question_schema)
@@ -371,20 +371,42 @@ class LanguageQuestionTransformer(FormTransformer):
             resource_urls_df = self.ques_df.select(
                 col("question._id.$oid").alias("question_id"),
                 explode_outer("question.resource_urls").alias("resource_urls"))
+            
+            # restriction df internal data transformation...
 
             restrictions_df = self.ques_df.select(
                 col("question._id.$oid").alias("question_id"),
                 explode_outer("question.restrictions").alias("restriction"))
+            
+            restriction_flat_df = restrictions_df.select(
+                col("question_id"),
+                col("restriction._id.$oid").alias("restriction_id"),
+                col("restriction.type").alias("type")
+            )
+
+            orders_df = restrictions_df.select(
+                col("restriction._id.$oid").alias("restriction_id"),
+                explode_outer("restriction.orders").alias("order_item")
+            )
+
+            restriction_orders_flat_df = orders_df.select(
+                col("restriction_id"),
+                col("order_item._id.$oid").alias("order_id"),
+                col("order_item.order").cast("int").alias("order"),
+                col("order_item.value").alias("value")
+            )
+
 
             weightage_df = self.ques_df.select(
                 col("question._id.$oid").alias("question_id"),
                 explode_outer("question.weightage").alias("weightage"))
 
+            final_restriction_orders_df = self.spark.createDataFrame(restriction_orders_flat_df.rdd, schema=restriction_order_schema)
+            final_restrictions_df = self.spark.createDataFrame(restriction_flat_df.rdd, schema=restriction_schema)
             final_resource_urls_df=self.spark.createDataFrame(resource_urls_df.rdd,schema=resource_url_schema)
-            final_restrictions_df=self.spark.createDataFrame(restrictions_df.rdd,schema=restriction_schema)
             final_weightage_df=self.spark.createDataFrame(weightage_df.rdd,schema=weightage_schema)
 
-            return final_resource_urls_df,final_restrictions_df,final_weightage_df
+            return final_resource_urls_df,final_restrictions_df,final_weightage_df,final_restriction_orders_df
         
         except Exception as e:
             raise ETL_Exception(e,sys)
@@ -403,6 +425,7 @@ class LanguageQuestionTransformer(FormTransformer):
             restriction_df=self.transform_questions_remaining_data()[1],
             resource_url_df=self.transform_questions_remaining_data()[0],
             weightage_df=self.transform_questions_remaining_data()[2],
+            restriction_order_df=self.transform_questions_remaining_data()[3],
             get_dynamic_option_df=self.get_dynamic_option_schema_data()[1],
             get_dynamic_option_mapping_df=self.get_dynamic_option_schema_data()[0],
             create_dynamic_option_df=self.transform_create_dynamic_option_data(),

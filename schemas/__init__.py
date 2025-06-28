@@ -112,6 +112,8 @@ form_schema = StructType([
     StructField("mandatoryModules", ArrayType(StringType())),
     StructField("googleSheet", MapType(StringType(), StringType())),
     StructField("masterConfig", ArrayType(StringType())),
+    StructField("copiedFromBackup", BooleanType(), True),
+    StructField("copiedFromBackup2", BooleanType(), True),
     StructField("language", ArrayType(
     StructType([
         StructField("_id", StructType([StructField("$oid", StringType())])),
@@ -136,6 +138,7 @@ form_schema = StructType([
             StructField("min", IntegerType()),
             StructField("max", IntegerType()),
             StructField("pattern", StringType()),
+            StructField("width",StringType(),True),    
 
             StructField("parent", ArrayType(StructType([
                 StructField("value", StringType()),
@@ -170,10 +173,19 @@ form_schema = StructType([
 
             StructField("resource_urls", ArrayType(StringType())),
 
-            StructField("restrictions", ArrayType(StructType([
-                StructField("type", StringType()),
-                StructField("value", StringType())
-            ]))),
+            StructField("restrictions", ArrayType(
+                        StructType([
+                            StructField("_id", StructType([StructField("$oid", StringType())])),
+                            StructField("type", StringType(), True),
+                            StructField("orders", ArrayType(
+                                StructType([
+                                    StructField("_id", StructType([StructField("$oid", StringType())])),
+                                    StructField("order", StringType(), True),
+                                    StructField("value", StringType(), True)
+                                ])
+                            ), True)
+                        ])
+                    ), True),
             StructField("weightage", ArrayType(StructType([
                 StructField("type", StringType()),
                 StructField("value", StringType())
@@ -255,7 +267,8 @@ question_schema = StructType([
     StructField("isEncrypted", BooleanType(), True),
     StructField("showComment", BooleanType(), True),
     StructField("information", StringType(), True),
-    StructField("hint", StringType(), True)
+    StructField("hint", StringType(), True),
+    StructField("width",StringType(),True),    
 ])
 
 parent_schema = StructType([
@@ -304,7 +317,15 @@ resource_url_schema = StructType([
 
 restriction_schema = StructType([
     StructField("question_id", StringType(), True),
-    StructField("restriction", MapType(StringType(), StringType()), True)  
+    StructField("restriction_id", StringType(), True),
+    StructField("type", StringType(), True)
+])
+
+restriction_order_schema = StructType([
+    StructField("restriction_id", StringType(), True),
+    StructField("order_id", StringType(), True),
+    StructField("order", IntegerType(), True),
+    StructField("value", StringType(), True)
 ])
 
 weightage_schema = StructType([
