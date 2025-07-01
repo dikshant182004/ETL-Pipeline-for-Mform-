@@ -2,9 +2,9 @@ import sys
 from etl.logger import logging
 from pyspark.sql import SparkSession
 from pyspark.sql import DataFrame
-from pyspark.sql.functions import col, explode, explode_outer
+from pyspark.sql.functions import col, explode, explode_outer, to_timestamp, to_json
 from etl.entity.artifact_entity import TransformationArtifact
-from etl.schemas import form_schema,language_schema,question_schema,parent_schema,child_schema,validation_schema,answer_option_schema,range_rule_schema,resource_url_schema,restriction_schema,weightage_schema,get_dynamic_option_schema,data_orders_mapping_schema,projects_schema,create_dynamic_option_schema,restriction_order_schema
+from etl.schemas.form_schema import *
 from etl.entity.artifact_entity import ExtractionArtifact
 from etl.exception import ETL_Exception
 
@@ -57,15 +57,15 @@ class FormTransformer:
                 col("isLivelihood").cast("boolean"),
                 col("isMedia").cast("boolean"),
                 col("dynamicData").cast("boolean"),
-                col("expiryDate.$date").cast("timestamp").alias("expiryDate"),
+                to_timestamp(col("expiryDate.$date")).alias("expiryDate"),
                 col("minAppVersion"),
                 col("isActive").cast("boolean"),
                 col("viewSequence"),
-                col("restrictedDays"),
-                col("duplicateCheckQuestions"),
-                col("keyInfoOrders"),
-                col("nonBypassableOrders"),
-                col("modifiedAtOrder"),
+                to_json(col("restrictedDays")).alias("restrictedDays"),
+                to_json(col("duplicateCheckQuestions")).alias("duplicateCheckQuestions"),
+                to_json(col("keyInfoOrders")).alias("keyInfoOrders"),
+                to_json(col("nonBypassableOrders")).alias("nonBypassableOrders"),
+                to_json(col("modifiedAtOrder")).alias("modifiedAtOrder"),
                 col("hideAllLabel").cast("boolean"),
                 col("isDynamicCard").cast("boolean"),
                 col("isMaster").cast("boolean"),
@@ -82,29 +82,30 @@ class FormTransformer:
                 col("isBulkUploadResponse").cast("boolean"),
                 col("isBulkUploadDraft").cast("boolean"),
                 col("onDemandDownload").cast("boolean"),
-                col("lockConfig"),
+                to_json(col("lockConfig")).alias("lockConfig"),
                 col("formType"),
                 col("analysisStatus").cast("boolean"),
                 col("isReferenceData").cast("boolean"),
                 col("mainFormId"),
-                col("actions"),
-                col("tags"),
+                to_json(col("actions")).alias("actions"),
+                to_json(col("tags")).alias("tags"),
                 col("formId").cast("int"),
                 col("__v").alias("form_version"),
-                col("createdAt").cast("timestamp"),
-                col("externalResource"),
+                to_timestamp(col("createdAt.$date"), "yyyy-MM-dd'T'HH:mm:ss.SSS'Z'").alias("createdAt"),
+                to_json(col("externalResource")).alias("externalResource"),
                 col("fillCount").cast("int"),
                 col("formIcon"),
-                col("hooks"),
-                col("mandatoryModules"),
-                col("googleSheet"),
-                col("masterConfig"),
-                col("modifiedAt.$date").cast("timestamp").alias("modifiedAt"),
+                to_json(col("hooks")).alias("hooks"),
+                to_json(col("mandatoryModules")).alias("mandatoryModules"),
+                col("googleSheet").alias("googleSheet"),
+                to_json(col("masterConfig")).alias("masterConfig"),
+                to_timestamp(col("modifiedAt.$date"),"yyyy-MM-dd'T'HH:mm:ss.SSSXXX").alias("modifiedAt"),
                 col("version"),
-                col("maskingConfig"),
+                to_json(col("maskingConfig")).alias("maskingConfig"),
                 col("copiedFromBackup").cast("boolean").alias("copied_from_backup"),
                 col("copiedFromBackup2").cast("boolean").alias("copied_from_backup2"),
             )
+
             return form_df
         except Exception as e:
             raise ETL_Exception(e,sys)
@@ -400,6 +401,7 @@ class LanguageQuestionTransformer(FormTransformer):
             weightage_df = self.ques_df.select(
                 col("question._id.$oid").alias("question_id"),
                 explode_outer("question.weightage").alias("weightage"))
+            weightage_df = weightage_df.withColumn("weightage_json", to_json(col("weightage"))).drop("weightage")
 
             final_restriction_orders_df = self.spark.createDataFrame(restriction_orders_flat_df.rdd, schema=restriction_order_schema)
             final_restrictions_df = self.spark.createDataFrame(restriction_flat_df.rdd, schema=restriction_schema)

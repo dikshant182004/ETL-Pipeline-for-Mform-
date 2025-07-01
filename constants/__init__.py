@@ -7,6 +7,7 @@ ARTIFACT_DIR: str = "artifact"
 MONGODB_URI: str = "mongodb://dikshant_mgrantv2:Bz7qP!R4vMuYfD2xWp@13.202.188.70:20585,65.1.243.251:20585,3.111.140.243:20585/mgrant-staging-v2?replicaSet=rs0&authSource=admin"
 DATABASE_NAME: str = "mgrant-staging-v2"
 COLLECTION_NAME: str = "forms"
+CLIENT_COLLECTION_NAME: str = "clientformdatas"
 
 """Constants for data Extraction process."""
 

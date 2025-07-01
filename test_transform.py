@@ -23,9 +23,12 @@ transformer = FormTransformer(spark, artifact)
 transformer1 = LanguageQuestionTransformer(spark, artifact)
 
 
-df1 ,df2,df3= transformer1.transform_questions_remaining_data()
-df1.show(100, truncate=False)
+# df1 ,df2,df3= transformer1.transform_questions_remaining_data()
+# df1.show(100, truncate=False)
 
 
 
+df= transformer.transform_form_data()
+df1=df.select("modifiedAt").show(truncate=False)
+df1.show()
 

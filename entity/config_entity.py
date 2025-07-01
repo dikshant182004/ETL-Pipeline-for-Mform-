@@ -20,8 +20,13 @@ class ExtractConfig:
     uri: str = MONGODB_URI
     database: str = DATABASE_NAME
     collection: str = COLLECTION_NAME
+    client_collection: str = CLIENT_COLLECTION_NAME
 
 
 @dataclass
 class TransformConfig:
     form_type: Optional[str] = None
+
+@dataclass
+class LoadConfig:
+    pass

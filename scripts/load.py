@@ -1,20 +1,20 @@
 import sys
-from sqlalchemy import create_engine, text
+import urllib.parse
+from sqlalchemy import create_engine, text  # using sqlalchemy just to automatically create database 
 from sqlalchemy.exc import OperationalError
 from etl.logger import logging
-from etl.entity.artifact_entity import TransformationArtifact
+from etl.entity.artifact_entity import TransformationArtifact, ClientTransformationArtifact
 from etl.exception import ETL_Exception
 
 class PostgresLoader:
     def __init__(self, db_user, db_password, db_host, db_port, db_name):
         try:
             logging.info("Connecting to the PostgreSQL database...")
-
+            self.db_user = db_user              
+            self.db_password = db_password       
             self.db_name = db_name
-            self.base_url = f"postgresql+psycopg2://{db_user}:{db_password}@{db_host}:{db_port}/"
-
-            # self.base_url = f"postgresql://{db_user}:{db_password}@{db_host}:{db_port}/"
-
+            encoded_password = urllib.parse.quote_plus(db_password)
+            self.base_url = f"postgresql+psycopg2://{db_user}:{encoded_password}@{db_host}:{db_port}/"
             default_engine = create_engine(self.base_url, isolation_level="AUTOCOMMIT")
 
             with default_engine.connect() as conn:
@@ -27,9 +27,8 @@ class PostgresLoader:
                 else:
                     logging.info(f"Database {db_name} already exists.")
 
-            # 2️⃣ Connect to the new DB for data loading
-            self.url = f"postgresql+psycopg2://{db_user}:{db_password}@{db_host}:{db_port}/{db_name}"
-            self.engine = create_engine(self.url)
+            self.url = f"jdbc:postgresql://{db_host}:{db_port}/{db_name}"   # JDBC for writing the data 
+            self.engine = create_engine(f"postgresql+psycopg2://{db_user}:{encoded_password}@{db_host}:{db_port}/{db_name}")
             logging.info(f"Connected to {db_name} successfully.")
 
         except OperationalError as e:
@@ -41,21 +40,23 @@ class PostgresLoader:
     def load_dataframe(self, df, table_name):
         try:
             logging.info(f"Loading table '{table_name}' into PostgreSQL.")
-            df.toPandas().to_sql(
-                name=table_name,
-                con=self.engine,
-                if_exists='replace',  # to avoid duplication of data
-                index=False,
-                method='multi',
-                chunksize=1000
-            )
+            df.write \
+                .format("jdbc") \
+                .option("url", self.url) \
+                .option("dbtable", table_name) \
+                .option("user", self.db_user) \
+                .option("password", self.db_password) \
+                .option("driver", "org.postgresql.Driver") \
+                .mode("overwrite") \
+                .save()
+            
             logging.info(f"Table '{table_name}' loaded successfully.")
         except Exception as e:
             logging.error(f"Failed to load table '{table_name}'.")
             raise ETL_Exception(e, sys)
 
     def load_all(self, artifact: TransformationArtifact, form_id: str):
-        """Loads all transformed DataFrames into PostgreSQL."""
+        """Loads all transformed form DataFrames into PostgreSQL."""
         try:
             form_info = f"form_{form_id}"
             logging.info(f"Starting data load for form: {form_info}")
@@ -88,6 +89,32 @@ class PostgresLoader:
                     self.load_dataframe(df, table_name)
 
             logging.info(f"All tables for form {form_id} loaded successfully.")
+
+        except Exception as e:
+            raise ETL_Exception(e, sys)
+        
+    def load_client_all(self, artifact: ClientTransformationArtifact, form_id: str):
+        """Loads client form Dataframes into PostgreSQL."""
+
+        try:
+            form_info = f"clientform_{form_id}"
+            logging.info(f"Starting data load for client form: {form_info}")
+
+            dataframes = {
+                "meta": artifact.clientform_df,
+                "question": artifact.question_df,
+                "initial_answer": artifact.initial_answer_df,
+                "answer": artifact.answer_df,
+                "reference": artifact.reference_df,
+                "location": artifact.location_df
+            }
+
+            for suffix, df in dataframes.items():
+                if df is not None:
+                    table_name = f"{form_info}_{suffix}"
+                    self.load_dataframe(df, table_name)
+
+            logging.info(f"All client form tables for {form_id} loaded successfully.")
 
         except Exception as e:
             raise ETL_Exception(e, sys)

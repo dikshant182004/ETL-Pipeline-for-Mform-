@@ -27,6 +27,15 @@ class TransformationArtifact:
     projects_df: DataFrame
 
 @dataclass
+class ClientTransformationArtifact:
+    clientform_df: DataFrame
+    question_df: DataFrame
+    initial_answer_df: DataFrame
+    answer_df: DataFrame
+    reference_df: DataFrame
+    location_df: DataFrame
+
+@dataclass
 class LoadArtifact:
     destination_table: str
     rows_written: int
